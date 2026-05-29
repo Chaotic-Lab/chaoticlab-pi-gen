@@ -1,0 +1,119 @@
+name: Build Pi OS Image
+
+on:
+  schedule:
+    - cron: '0 6 * * *'      # 03:00 BRT (UTC-3) nightly
+  workflow_dispatch:           # manual trigger from Actions UI
+  push:
+    tags: ['v*.*.*']           # release builds on tag push
+
+permissions:
+  contents: read
+  id-token: write              # required for cosign keyless OIDC
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm  # native ARM, ~8-15 min on free GHA tier
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          missing=()
+          [ -z "${{ secrets.PI_DEFAULT_PASSWORD }}" ] && missing+=(PI_DEFAULT_PASSWORD)
+          [ -z "${{ secrets.OPS_SSH_PUBKEY }}" ]     && missing+=(OPS_SSH_PUBKEY)
+          [ -z "${{ secrets.MINIO_ACCESS_KEY }}" ]   && missing+=(MINIO_ACCESS_KEY)
+          [ -z "${{ secrets.MINIO_SECRET_KEY }}" ]   && missing+=(MINIO_SECRET_KEY)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::Missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          df -h
+
+      - name: Build Raspberry Pi OS image
+        id: pi-gen
+        uses: usimd/pi-gen-action@v1
+        with:
+          image-name: vena-pulse-${{ github.sha }}
+          stage-list: stage0 stage1 stage2 ./stage-tdc
+          release: bookworm
+          compression: xz
+          compression-level: 9
+          enable-pigen-cache: true
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          username: vena
+          password: ${{ secrets.PI_DEFAULT_PASSWORD }}
+          enable-ssh: 1
+          pubkey-only-ssh: 1
+          pubkey-ssh-first-user: ${{ secrets.OPS_SSH_PUBKEY }}
+          passwordless-sudo: 1
+          locale: pt_BR.UTF-8
+          timezone: America/Sao_Paulo
+          keyboard-keymap: br
+          hostname: vena-pulse
+          verbose-output: false
+
+      - name: Compute SHA-256 manifest (OTA verification path)
+        id: sha
+        run: |
+          IMG="${{ steps.pi-gen.outputs.image-path }}"
+          sha256sum "$IMG" | awk '{print $1}' > "$IMG.sha256"
+          echo "Image SHA-256: $(cat $IMG.sha256)"
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.4.1'
+
+      - name: Sign image (keyless OIDC via GitHub Actions)
+        run: |
+          cosign sign-blob --yes \
+            --oidc-provider github-actions \
+            --bundle "${{ steps.pi-gen.outputs.image-path }}.sigstore.json" \
+            "${{ steps.pi-gen.outputs.image-path }}"
+
+      - name: Verify own signature (self-test before publish)
+        run: |
+          cosign verify-blob \
+            --bundle "${{ steps.pi-gen.outputs.image-path }}.sigstore.json" \
+            --certificate-identity-regexp 'https://github.com/Chaotic-Lab/caos-lab-pi-gen/.+' \
+            --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+            "${{ steps.pi-gen.outputs.image-path }}"
+
+      - name: Upload to MinIO (s3.chaoticlab.cloud)
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.MINIO_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+          AWS_ENDPOINT_URL:      https://s3.chaoticlab.cloud
+          AWS_DEFAULT_REGION:    us-east-1
+        run: |
+          aws configure set default.s3.signature_version s3v4
+          IMG="${{ steps.pi-gen.outputs.image-path }}"
+          SIG="${IMG}.sigstore.json"
+          SHA="${IMG}.sha256"
+          CHANNEL="${{ github.ref_type == 'tag' && 'stable' || 'nightly' }}"
+          BASE=$(basename "$IMG")
+          # Versioned upload
+          aws s3 cp "$IMG" "s3://datapool-tdc/firmware/pulse/$CHANNEL/$BASE"
+          aws s3 cp "$SIG" "s3://datapool-tdc/firmware/pulse/$CHANNEL/$BASE.sigstore.json"
+          aws s3 cp "$SHA" "s3://datapool-tdc/firmware/pulse/$CHANNEL/$BASE.sha256"
+          # Update "latest" pointers for OTA polling (Sub-plan E consumes these)
+          aws s3 cp "$IMG" "s3://datapool-tdc/firmware/pulse/$CHANNEL/latest.img.xz"
+          aws s3 cp "$SIG" "s3://datapool-tdc/firmware/pulse/$CHANNEL/latest.img.xz.sigstore.json"
+          aws s3 cp "$SHA" "s3://datapool-tdc/firmware/pulse/$CHANNEL/latest.img.xz.sha256"
+          echo "Published $CHANNEL/$BASE (image + sigstore + sha256)"
+
+      - name: Upload artifact (fallback for manual debug)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pi-image-${{ github.sha }}
+          path: ${{ steps.pi-gen.outputs.image-path }}
+          retention-days: 7
