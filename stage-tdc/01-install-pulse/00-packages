@@ -1,0 +1,12 @@
+python3
+python3-pip
+python3-venv
+python3-dev
+libsystemd-dev
+bluez
+bluez-tools
+pi-bluetooth
+hostapd
+dnsmasq
+network-manager
+sqlite3
