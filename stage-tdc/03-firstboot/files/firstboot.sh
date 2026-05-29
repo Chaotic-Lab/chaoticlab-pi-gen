@@ -64,7 +64,12 @@ done
 if [ ! -d "/lib/modules/$KVER/build" ]; then
   echo "[firstboot] headers missing; attempting on-demand install"
   apt-get update -qq || true
-  apt-get install -y --no-install-recommends raspberrypi-kernel-headers || true
+  # Bookworm renamed RPi kernel/header packages to linux-{image,headers}-rpi-*.
+  # Try the exact-version package first, then the v8 meta, then the legacy name.
+  apt-get install -y --no-install-recommends "linux-headers-${KVER}" \
+    || apt-get install -y --no-install-recommends linux-headers-rpi-v8 \
+    || apt-get install -y --no-install-recommends raspberrypi-kernel-headers \
+    || true
 fi
 
 if [ ! -d "/lib/modules/$KVER/build" ]; then

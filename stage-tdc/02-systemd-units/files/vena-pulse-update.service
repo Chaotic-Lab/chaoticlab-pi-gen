@@ -11,7 +11,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/opt/tdc-pulse-venv/bin/pip install -U git+https://github.com/Chaotic-Lab/caos-lab-sbc.git@main#egg=tdc-pulse
+ExecStart=/opt/tdc-pulse-venv/bin/pip install -U git+https://github.com/Chaotic-Lab/caos-lab-sbc.git@master#egg=tdc-pulse
 ExecStartPost=/usr/bin/systemctl try-restart vena-pulse-publisher.service vena-pulse-scanner-wifi.service vena-pulse-scanner-ble.service
 TimeoutStartSec=600s
 

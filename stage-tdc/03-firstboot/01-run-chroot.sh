@@ -1,9 +1,8 @@
 #!/bin/bash -e
 set -euo pipefail
 
-install -m 0755 /tmp/files/firstboot.sh /usr/local/sbin/vena-pulse-firstboot
-install -m 0644 /tmp/files/vena-pulse-firstboot.service /etc/systemd/system/
-
+# Script + unit were installed into the rootfs by the companion 00-run.sh.
+# Enabling requires the chroot.
 systemctl enable vena-pulse-firstboot.service
 
-echo "first-boot script + unit installed"
+echo "first-boot unit enabled"

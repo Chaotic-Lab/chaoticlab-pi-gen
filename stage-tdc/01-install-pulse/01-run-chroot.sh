@@ -18,13 +18,14 @@ chown vena-pulse:vena-pulse /var/lib/vena-pulse /run/vena-pulse
 chmod 0750 /etc/vena-pulse /var/lib/vena-pulse /run/vena-pulse
 
 # Install into /opt/tdc-pulse-venv (system-wide, not per-user).
-# Sprint A always installs from `main` branch HEAD. Sprint E hardens this
+# Sprint A always installs from `master` branch HEAD. Sprint E hardens this
 # to GitHub Release artifact with cosign verification — risk explicitly
 # documented in spec §20 R10 and master plan cross-cutting concerns.
+# NOTE: branch is `master` (repo default), NOT `main`.
 python3 -m venv /opt/tdc-pulse-venv
 /opt/tdc-pulse-venv/bin/pip install --upgrade pip wheel
 /opt/tdc-pulse-venv/bin/pip install \
-  "git+https://github.com/Chaotic-Lab/caos-lab-sbc.git@main#egg=tdc-pulse"
+  "git+https://github.com/Chaotic-Lab/caos-lab-sbc.git@master#egg=tdc-pulse"
 
 # Symlink Poetry-defined console scripts into /usr/local/bin so systemd
 # units can reference stable paths.
@@ -35,14 +36,24 @@ done
 
 # Enable bluetoothd --experimental flag (required by bleak passive scan).
 # Research finding: bleak BlueZ passive mode REQUIRES this.
-# Drop-in override at /etc/systemd/system/.../bluetooth.service.d/
-# survives apt upgrades of bluez (sed-editing /lib/systemd/... does NOT).
+# Drop-in override survives apt upgrades of bluez (sed-editing /lib/systemd/...
+# does NOT). The bluetoothd binary path differs across Debian releases
+# (Bookworm = /usr/libexec/bluetooth/bluetoothd; older = /usr/lib/bluetooth/
+# bluetoothd), so detect the real path inside the chroot instead of hardcoding.
+BTD_PATH="$(command -v bluetoothd 2>/dev/null || true)"
+if [ -z "$BTD_PATH" ]; then
+  for c in /usr/libexec/bluetooth/bluetoothd /usr/lib/bluetooth/bluetoothd; do
+    [ -x "$c" ] && BTD_PATH="$c" && break
+  done
+fi
+[ -z "$BTD_PATH" ] && BTD_PATH=/usr/libexec/bluetooth/bluetoothd
+echo "bluetoothd path resolved to: $BTD_PATH"
 mkdir -p /etc/systemd/system/bluetooth.service.d
-cat > /etc/systemd/system/bluetooth.service.d/10-experimental.conf <<'EOF'
+cat > /etc/systemd/system/bluetooth.service.d/10-experimental.conf <<EOF
 [Service]
 # Blank ExecStart= clears the upstream value before re-adding (systemd idiom).
 ExecStart=
-ExecStart=/usr/lib/bluetooth/bluetoothd --experimental
+ExecStart=${BTD_PATH} --experimental
 EOF
 
 # Hold kernel packages so unattended-upgrades cannot break DKMS rebuild
@@ -50,17 +61,17 @@ EOF
 # if headers are present + version-matched. We hold to AVOID the race window
 # between kernel install and headers install during unattended-upgrades.
 # Manual ops upgrade kernel + headers together when needed.
+# (apt-mark hold on a non-installed package is a no-op error which `|| true`
+# swallows — so listing legacy names alongside Bookworm names is harmless.)
+apt-mark hold linux-image-rpi-v8 linux-headers-rpi-v8 || true
+apt-mark hold linux-image-rpi-2712 linux-headers-rpi-2712 || true
 apt-mark hold raspberrypi-kernel raspberrypi-kernel-headers || true
-# linux-image-rpi-v8 / linux-image-rpi-2712 are the actual binary kernels
-# on Bookworm 64-bit Pi Zero 2 W. Hold both proactively (apt-mark on a
-# non-installed package is a no-op error which `|| true` swallows).
-apt-mark hold linux-image-rpi-v8 || true
-apt-mark hold linux-image-rpi-2712 || true
 
 # Disable unattended-upgrades on kernel pkgs as belt-and-suspenders.
 cat > /etc/apt/apt.conf.d/51unattended-upgrades-kernel-blacklist <<'EOF'
 Unattended-Upgrade::Package-Blacklist {
     "linux-image-.*";
+    "linux-headers-.*";
     "raspberrypi-kernel.*";
 };
 EOF
