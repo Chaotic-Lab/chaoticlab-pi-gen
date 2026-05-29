@@ -1,0 +1,15 @@
+[Unit]
+Description=Vena Pulse — first boot device_id + DKMS rebuild + iface pinning
+ConditionPathExists=!/etc/vena-pulse/firstboot.done
+After=local-fs.target
+Before=vena-pulse-onboarding.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/vena-pulse-firstboot
+RemainAfterExit=no
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
