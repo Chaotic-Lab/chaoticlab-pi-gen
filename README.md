@@ -1,6 +1,6 @@
 # caos-lab-pi-gen
 
-Custom Raspberry Pi OS image baker for the Caos Lab **Vena Pulse** SBC SKU.
+Custom Raspberry Pi OS image baker for the ChaoticLab **Vena Pulse** SBC SKU.
 
 Wraps the official [RPi-Distro/pi-gen](https://github.com/RPi-Distro/pi-gen) via
 [usimd/pi-gen-action](https://github.com/usimd/pi-gen-action) in GitHub Actions.
