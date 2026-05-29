@@ -13,8 +13,12 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-24.04-arm  # native ARM, ~8-15 min on free GHA tier
-    timeout-minutes: 90
+    # PRIVATE-repo compatible: free GitHub-hosted ubuntu-24.04-arm runners are
+    # public-repo-only, so we build the aarch64 image on x86 via QEMU/binfmt
+    # (pi-gen's native cross-build path). Uses normal private-repo free minutes;
+    # slower (~30-45 min) than native ARM but keeps the repos private.
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
 
     steps:
       - name: Checkout
@@ -27,10 +31,34 @@ jobs:
           [ -z "${{ secrets.OPS_SSH_PUBKEY }}" ]     && missing+=(OPS_SSH_PUBKEY)
           [ -z "${{ secrets.MINIO_ACCESS_KEY }}" ]   && missing+=(MINIO_ACCESS_KEY)
           [ -z "${{ secrets.MINIO_SECRET_KEY }}" ]   && missing+=(MINIO_SECRET_KEY)
+          [ -z "${{ secrets.SBC_READ_TOKEN }}" ]     && missing+=(SBC_READ_TOKEN)
           if [ ${#missing[@]} -gt 0 ]; then
             echo "::error::Missing required secrets: ${missing[*]}"
             exit 1
           fi
+
+      - name: Set up QEMU (aarch64 binfmt for cross-build on x86)
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
+      - name: Set up Python (wheel build)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build tdc-pulse wheel from PRIVATE caos-lab-sbc
+        # Clone the private lib here (CI has a read-only deploy token) and build
+        # the wheel into the stage's files/ dir. pi-gen then bakes the local
+        # wheel into the image — the chroot NEVER clones the private repo, so
+        # caos-lab-sbc stays private. Runtime deps still resolve from public PyPI.
+        run: |
+          python -m pip install --upgrade build
+          git clone --depth 1 --branch master \
+            "https://x-access-token:${{ secrets.SBC_READ_TOKEN }}@github.com/Chaotic-Lab/caos-lab-sbc.git" /tmp/sbc
+          mkdir -p stage-tdc/01-install-pulse/files
+          python -m build --wheel --outdir stage-tdc/01-install-pulse/files /tmp/sbc
+          echo "Built wheel: $(ls stage-tdc/01-install-pulse/files/*.whl)"
 
       - name: Free disk space
         run: |

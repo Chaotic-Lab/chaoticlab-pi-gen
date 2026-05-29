@@ -17,15 +17,14 @@ mkdir -p /etc/vena-pulse /var/lib/vena-pulse /run/vena-pulse
 chown vena-pulse:vena-pulse /var/lib/vena-pulse /run/vena-pulse
 chmod 0750 /etc/vena-pulse /var/lib/vena-pulse /run/vena-pulse
 
-# Install into /opt/tdc-pulse-venv (system-wide, not per-user).
-# Sprint A always installs from `master` branch HEAD. Sprint E hardens this
-# to GitHub Release artifact with cosign verification — risk explicitly
-# documented in spec §20 R10 and master plan cross-cutting concerns.
-# NOTE: branch is `master` (repo default), NOT `main`.
+# Install into /opt/tdc-pulse-venv (system-wide, not per-user) from the LOCAL
+# wheel staged by 00-run.sh (CI built it from the private caos-lab-sbc repo).
+# This keeps caos-lab-sbc PRIVATE — the image never clones it. Runtime deps
+# (scapy/bleak/etc.) still resolve from public PyPI during this install.
+# Sprint E hardens further: cosign-verified wheel pulled from MinIO.
 python3 -m venv /opt/tdc-pulse-venv
 /opt/tdc-pulse-venv/bin/pip install --upgrade pip wheel
-/opt/tdc-pulse-venv/bin/pip install \
-  "git+https://github.com/Chaotic-Lab/caos-lab-sbc.git@master#egg=tdc-pulse"
+/opt/tdc-pulse-venv/bin/pip install /opt/tdc-pulse-wheels/*.whl
 
 # Symlink Poetry-defined console scripts into /usr/local/bin so systemd
 # units can reference stable paths.

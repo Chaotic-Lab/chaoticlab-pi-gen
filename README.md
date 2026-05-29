@@ -23,6 +23,18 @@ A Bookworm 64-bit minimal Lite image (~600MB compressed) with:
 
 Use GitHub Actions UI → "Build Pi OS Image" → Run workflow.
 
+## Private-repo design
+
+Both `caos-lab-pi-gen` and `caos-lab-sbc` are **private** (the IP is not exposed)
+while keeping the convenience of a public CI:
+
+- The image is built on `ubuntu-latest` (x86) with QEMU/binfmt — pi-gen
+  cross-builds the aarch64 image. Free GitHub-hosted `ubuntu-24.04-arm` runners
+  are public-repo-only, so we don't use them; private repos use normal free minutes.
+- `tdc-pulse` is **not** cloned from the private `caos-lab-sbc` inside the image.
+  CI checks out `caos-lab-sbc` with a read-only token, builds the wheel, and
+  bakes the local wheel into the image. The Pi/chroot never touches the private repo.
+
 ## Required GitHub secrets
 
 Set in repo Settings → Secrets and variables → Actions:
@@ -31,3 +43,5 @@ Set in repo Settings → Secrets and variables → Actions:
 - `OPS_SSH_PUBKEY` — authorized `ssh-ed25519` key for emergency access
 - `MINIO_ACCESS_KEY` — MinIO IAM user `pi-gen-ci` with write to `s3://datapool-tdc/firmware/pulse/`
 - `MINIO_SECRET_KEY`
+- `SBC_READ_TOKEN` — fine-grained PAT (or deploy token) with **read-only Contents**
+  on `Chaotic-Lab/caos-lab-sbc`, so CI can clone + build the wheel from the private lib

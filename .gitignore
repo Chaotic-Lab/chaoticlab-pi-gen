@@ -1,0 +1,9 @@
+# tdc-pulse wheel is built by CI (build-image.yml) from the private caos-lab-sbc
+# repo into this dir at bake time — never committed.
+stage-tdc/01-install-pulse/files/*.whl
+
+# pi-gen build artifacts (if ever run locally)
+deploy/
+work/
+*.img
+*.img.xz
