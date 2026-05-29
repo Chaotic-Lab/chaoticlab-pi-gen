@@ -1,0 +1,6 @@
+# Everything in this repo is consumed on Linux (pi-gen chroot). Force LF so
+# shebangs (#!/bin/bash) and apt package lists (00-packages) never get a CR.
+* text=auto eol=lf
+*.img binary
+*.img.xz binary
+*.png binary
