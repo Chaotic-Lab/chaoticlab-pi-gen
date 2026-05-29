@@ -1,0 +1,40 @@
+[Unit]
+Description=Vena Pulse Wi-Fi probe-request scanner
+Documentation=https://github.com/Chaotic-Lab/caos-lab-sbc
+After=network-online.target
+Wants=network-online.target sys-subsystem-net-devices-wlan1.device
+ConditionPathExists=/etc/vena-pulse/config.json
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=vena-pulse
+Group=netdev
+# Note: NetworkManager-managed off for wlan1 is enforced via
+#   /etc/NetworkManager/conf.d/99-vena-wlan1-unmanaged.conf
+#   (baked into pi-gen Task 13). The `-` prefix on ExecStartPre tolerates
+#   nmcli/iw failures so first-boot without the dongle does not loop.
+ExecStartPre=-/usr/sbin/ip link set wlan1 down
+ExecStartPre=-/usr/sbin/iw dev wlan1 set type monitor
+ExecStartPre=-/usr/sbin/ip link set wlan1 up
+ExecStart=/usr/local/bin/vena-pulse-scanner-wifi
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=10s
+
+# Hardening — non-root with ambient caps
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/run/vena-pulse /var/lib/vena-pulse
+PrivateTmp=yes
+ProtectHome=yes
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+
+# Journald rate-limit safeguard
+LogRateLimitIntervalSec=10
+LogRateLimitBurst=5000
+
+[Install]
+WantedBy=multi-user.target

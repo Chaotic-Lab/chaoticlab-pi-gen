@@ -1,0 +1,19 @@
+[Unit]
+Description=Vena Pulse — pull latest tdc-pulse-py from GitHub Releases
+# NOTE Sprint A: this pulls from `main` HEAD WITHOUT signature verification.
+# Acceptable risk only while Sub-plan D's PIA gate keeps real coverage off.
+# Sub-plan E MUST harden this to: download from GitHub Release artifact
+# (wheel) + cosign verify-blob against caos-lab-sbc workflow identity
+# before install. See spec §20 R10 and master plan cross-cutting concerns.
+ConditionPathExists=/etc/vena-pulse/config.json
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/tdc-pulse-venv/bin/pip install -U git+https://github.com/Chaotic-Lab/caos-lab-sbc.git@main#egg=tdc-pulse
+ExecStartPost=/usr/bin/systemctl try-restart vena-pulse-publisher.service vena-pulse-scanner-wifi.service vena-pulse-scanner-ble.service
+TimeoutStartSec=600s
+
+[Install]
+WantedBy=multi-user.target

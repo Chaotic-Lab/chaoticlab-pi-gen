@@ -1,0 +1,37 @@
+[Unit]
+Description=Vena Pulse HTTP publisher (UDS reader -> Rails)
+Documentation=https://github.com/Chaotic-Lab/caos-lab-sbc
+After=network-online.target vena-pulse-scanner-wifi.service vena-pulse-scanner-ble.service
+Wants=network-online.target vena-pulse-scanner-wifi.service vena-pulse-scanner-ble.service
+ConditionPathExists=/etc/vena-pulse/config.json
+StartLimitIntervalSec=300
+StartLimitBurst=10
+RuntimeDirectory=vena-pulse
+RuntimeDirectoryMode=0750
+StateDirectory=vena-pulse
+StateDirectoryMode=0750
+
+[Service]
+Type=simple
+User=vena-pulse
+Group=vena-pulse
+ExecStart=/usr/local/bin/vena-pulse-publisher
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=15s
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/run/vena-pulse /var/lib/vena-pulse
+PrivateTmp=yes
+ProtectHome=yes
+
+# Network egress only (HTTPS to BOS Rails)
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+LogRateLimitIntervalSec=10
+LogRateLimitBurst=5000
+
+[Install]
+WantedBy=multi-user.target

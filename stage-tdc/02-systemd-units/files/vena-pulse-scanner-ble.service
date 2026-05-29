@@ -1,0 +1,34 @@
+[Unit]
+Description=Vena Pulse BLE advertising scanner
+Documentation=https://github.com/Chaotic-Lab/caos-lab-sbc
+Requires=bluetooth.service
+After=bluetooth.service network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/vena-pulse/config.json
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=vena-pulse
+Group=bluetooth
+# bluetoothctl uses D-Bus so no CAP_NET_ADMIN required; `hciconfig hci0 up`
+# would need CAP_NET_ADMIN which conflicts with our non-root hardening.
+ExecStartPre=-/usr/bin/bluetoothctl --timeout 5 power on
+ExecStart=/usr/local/bin/vena-pulse-scanner-ble
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=10s
+
+# Hardening (bleak does NOT need CAP_NET_RAW; D-Bus + bluetooth group suffices)
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/run/vena-pulse /var/lib/vena-pulse
+PrivateTmp=yes
+ProtectHome=yes
+
+LogRateLimitIntervalSec=10
+LogRateLimitBurst=5000
+
+[Install]
+WantedBy=multi-user.target

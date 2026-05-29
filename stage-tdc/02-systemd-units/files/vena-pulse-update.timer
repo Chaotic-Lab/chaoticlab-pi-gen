@@ -1,0 +1,11 @@
+[Unit]
+Description=Vena Pulse — daily pip self-update timer
+Documentation=spec §6.5 OTA Layer 1
+
+[Timer]
+OnCalendar=*-*-* 04:00:00 America/Sao_Paulo
+Persistent=yes
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target
