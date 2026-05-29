@@ -1,0 +1,8 @@
+raspberrypi-kernel-headers
+build-essential
+bc
+dkms
+git
+iw
+rfkill
+libelf-dev
