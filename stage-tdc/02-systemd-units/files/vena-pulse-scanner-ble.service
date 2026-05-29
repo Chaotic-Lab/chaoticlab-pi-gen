@@ -1,6 +1,6 @@
 [Unit]
 Description=Vena Pulse BLE advertising scanner
-Documentation=https://github.com/Chaotic-Lab/caos-lab-sbc
+Documentation=https://github.com/Chaotic-Lab/chaoticlab-sbc
 Requires=bluetooth.service
 After=bluetooth.service network-online.target
 Wants=network-online.target

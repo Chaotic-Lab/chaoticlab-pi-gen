@@ -1,6 +1,6 @@
 [Unit]
 Description=Vena Pulse HTTP publisher (UDS reader -> Rails)
-Documentation=https://github.com/Chaotic-Lab/caos-lab-sbc
+Documentation=https://github.com/Chaotic-Lab/chaoticlab-sbc
 After=network-online.target vena-pulse-scanner-wifi.service vena-pulse-scanner-ble.service
 Wants=network-online.target vena-pulse-scanner-wifi.service vena-pulse-scanner-ble.service
 ConditionPathExists=/etc/vena-pulse/config.json

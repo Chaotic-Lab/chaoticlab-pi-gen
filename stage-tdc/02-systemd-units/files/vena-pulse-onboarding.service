@@ -1,6 +1,6 @@
 [Unit]
 Description=Vena Pulse first-boot captive portal (run only if no config)
-Documentation=https://github.com/Chaotic-Lab/caos-lab-sbc
+Documentation=https://github.com/Chaotic-Lab/chaoticlab-sbc
 ConditionPathExists=!/etc/vena-pulse/config.json
 After=network.target
 Conflicts=vena-pulse-scanner-wifi.service vena-pulse-scanner-ble.service vena-pulse-publisher.service

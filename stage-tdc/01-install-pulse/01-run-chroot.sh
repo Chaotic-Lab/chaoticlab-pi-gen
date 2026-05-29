@@ -18,8 +18,8 @@ chown vena-pulse:vena-pulse /var/lib/vena-pulse /run/vena-pulse
 chmod 0750 /etc/vena-pulse /var/lib/vena-pulse /run/vena-pulse
 
 # Install into /opt/tdc-pulse-venv (system-wide, not per-user) from the LOCAL
-# wheel staged by 00-run.sh (CI built it from the private caos-lab-sbc repo).
-# This keeps caos-lab-sbc PRIVATE — the image never clones it. Runtime deps
+# wheel staged by 00-run.sh (CI built it from the private chaoticlab-sbc repo).
+# This keeps chaoticlab-sbc PRIVATE — the image never clones it. Runtime deps
 # (scapy/bleak/etc.) still resolve from public PyPI during this install.
 # Sprint E hardens further: cosign-verified wheel pulled from MinIO.
 python3 -m venv /opt/tdc-pulse-venv

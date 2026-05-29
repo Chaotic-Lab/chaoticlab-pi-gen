@@ -1,8 +1,8 @@
 #!/bin/bash -e
 # Non-chroot installer (pi-gen does not stage files/ into the chroot — see
 # 02-systemd-units/00-run.sh). CI (build-image.yml) builds the tdc-pulse wheel
-# from the PRIVATE caos-lab-sbc repo into files/ (gitignored). We copy it into
-# the rootfs so the chroot installs locally — keeps caos-lab-sbc private (no
+# from the PRIVATE chaoticlab-sbc repo into files/ (gitignored). We copy it into
+# the rootfs so the chroot installs locally — keeps chaoticlab-sbc private (no
 # git clone of the private repo from inside the image).
 set -euo pipefail
 shopt -s nullglob

@@ -47,15 +47,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Build tdc-pulse wheel from PRIVATE caos-lab-sbc
+      - name: Build tdc-pulse wheel from PRIVATE chaoticlab-sbc
         # Clone the private lib here (CI has a read-only deploy token) and build
         # the wheel into the stage's files/ dir. pi-gen then bakes the local
         # wheel into the image — the chroot NEVER clones the private repo, so
-        # caos-lab-sbc stays private. Runtime deps still resolve from public PyPI.
+        # chaoticlab-sbc stays private. Runtime deps still resolve from public PyPI.
         run: |
           python -m pip install --upgrade build
           git clone --depth 1 --branch master \
-            "https://x-access-token:${{ secrets.SBC_READ_TOKEN }}@github.com/Chaotic-Lab/caos-lab-sbc.git" /tmp/sbc
+            "https://x-access-token:${{ secrets.SBC_READ_TOKEN }}@github.com/Chaotic-Lab/chaoticlab-sbc.git" /tmp/sbc
           mkdir -p stage-tdc/01-install-pulse/files
           python -m build --wheel --outdir stage-tdc/01-install-pulse/files /tmp/sbc
           echo "Built wheel: $(ls stage-tdc/01-install-pulse/files/*.whl)"
@@ -111,7 +111,7 @@ jobs:
         run: |
           cosign verify-blob \
             --bundle "${{ steps.pi-gen.outputs.image-path }}.sigstore.json" \
-            --certificate-identity-regexp 'https://github.com/Chaotic-Lab/caos-lab-pi-gen/.+' \
+            --certificate-identity-regexp 'https://github.com/Chaotic-Lab/chaoticlab-pi-gen/.+' \
             --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
             "${{ steps.pi-gen.outputs.image-path }}"
 

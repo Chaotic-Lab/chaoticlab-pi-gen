@@ -1,4 +1,4 @@
-# tdc-pulse wheel is built by CI (build-image.yml) from the private caos-lab-sbc
+# tdc-pulse wheel is built by CI (build-image.yml) from the private chaoticlab-sbc
 # repo into this dir at bake time — never committed.
 stage-tdc/01-install-pulse/files/*.whl
 

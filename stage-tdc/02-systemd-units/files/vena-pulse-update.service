@@ -1,9 +1,9 @@
 [Unit]
 Description=Vena Pulse — OTA self-update (Sprint E deliverable; stub on this image)
-# caos-lab-sbc is PRIVATE, so an anonymous `pip install git+https://...` would
+# chaoticlab-sbc is PRIVATE, so an anonymous `pip install git+https://...` would
 # fail on a deployed Pi. Real OTA is a Sub-plan E deliverable: pull the
 # cosign-verified wheel from MinIO (s3.chaoticlab.cloud/datapool-tdc/firmware/
-# pulse/...), verify-blob against the caos-lab-sbc workflow identity, then
+# pulse/...), verify-blob against the chaoticlab-sbc workflow identity, then
 # install. See spec §20 R10 + master plan cross-cutting concerns. Until then
 # this is a logged no-op (and is gated below so it never runs pre-onboarding).
 ConditionPathExists=/etc/vena-pulse/config.json
