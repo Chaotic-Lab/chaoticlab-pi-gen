@@ -65,24 +65,23 @@ jobs:
         id: pi-gen
         uses: usimd/pi-gen-action@v1
         with:
-          # Pin to the 2025-05-13 bookworm-arm64 RELEASE tag (a QA'd Raspberry Pi
-          # OS build whose stage0 is known-good). It predates the Aug-2025
-          # archive-keyring regression on the arm64 DEV branch (pi-gen issues
-          # #862/#863) that broke deb.debian.org GPG verification in stage0 with
-          # NO_PUBKEY. bookworm signing keys are stable + non-expiring, so this
-          # tag still bootstraps cleanly today. Without this pin the action
-          # defaults to the broken arm64 branch HEAD.
-          pi-gen-version: '2025-05-13-raspios-bookworm-arm64'
-          # This pinned tag carries pi-gen bug #855: export-image/05-finalise
-          # GUARDS bmap creation behind `if hash bmaptool` but COPIES it
-          # UNCONDITIONALLY (`cp "$BMAP_FILE" ...`, no `[ -f ]`). bmap-tools is
-          # NOT in pi-gen's `depends` (which the action auto-installs), so the
-          # runner lacks `bmaptool`, the .bmap is never created, and the bare cp
-          # aborts the build with `cannot stat .bmap` under set -e. Installing it
-          # on the host makes `bmaptool create` run → cp finds the file → success.
-          # (Fix commit e9c2afbd post-dates this tag, so we add the dep instead of
-          # bumping the deliberately-pinned base image.)
-          extra-host-dependencies: bmap-tools
+          # Pin to the 2025-10-01 bookworm-arm64 RELEASE tag. Two reasons:
+          #  1) QA'd Raspberry Pi OS build (known-good stage0) → dodges the
+          #     Aug-2025 archive-keyring regression on the arm64 DEV branch
+          #     (pi-gen #862/#863) that broke deb.debian.org GPG verify in stage0
+          #     (NO_PUBKEY). bookworm signing keys are stable/non-expiring.
+          #  2) POST-dates fix commit e9c2afbd (2025-05-13) which wraps the
+          #     export-image bmap copy in `if [ -f "$BMAP_FILE" ]`. The earlier
+          #     2025-05-13 tag predated that commit and carried pi-gen #855:
+          #     bmap CREATION is guarded by `if hash bmaptool` but the copy was
+          #     UNCONDITIONAL. pi-gen runs in a Docker container (pigen_work)
+          #     whose image only has pi-gen's `depends`, and bmap-tools is NOT in
+          #     depends → bmaptool absent → no .bmap written → the bare cp aborted
+          #     the build under set -e. Host-side extra-host-dependencies can't
+          #     fix it (it installs on the runner, not inside pigen_work). This
+          #     tag's guarded cp simply skips the missing .bmap and completes.
+          #     No .bmap artifact is produced (fine — flash the .img.xz directly).
+          pi-gen-version: '2025-10-01-raspios-bookworm-arm64'
           image-name: vena-pulse-${{ github.sha }}
           stage-list: stage0 stage1 stage2 ./stage-tdc
           release: bookworm
