@@ -65,6 +65,14 @@ jobs:
         id: pi-gen
         uses: usimd/pi-gen-action@v1
         with:
+          # Pin to the 2025-05-13 bookworm-arm64 RELEASE tag (a QA'd Raspberry Pi
+          # OS build whose stage0 is known-good). It predates the Aug-2025
+          # archive-keyring regression on the arm64 DEV branch (pi-gen issues
+          # #862/#863) that broke deb.debian.org GPG verification in stage0 with
+          # NO_PUBKEY. bookworm signing keys are stable + non-expiring, so this
+          # tag still bootstraps cleanly today. Without this pin the action
+          # defaults to the broken arm64 branch HEAD.
+          pi-gen-version: '2025-05-13-raspios-bookworm-arm64'
           image-name: vena-pulse-${{ github.sha }}
           stage-list: stage0 stage1 stage2 ./stage-tdc
           release: bookworm
