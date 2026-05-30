@@ -13,11 +13,12 @@ permissions:
 
 jobs:
   build:
-    # PRIVATE-repo compatible: free GitHub-hosted ubuntu-24.04-arm runners are
-    # public-repo-only, so we build the aarch64 image on x86 via QEMU/binfmt
-    # (pi-gen's native cross-build path). Uses normal private-repo free minutes;
-    # slower (~30-45 min) than native ARM but keeps the repos private.
-    runs-on: ubuntu-latest
+    # Native arm64 runner (free for PUBLIC repos). pi-gen's arch-test sees arm64
+    # as NATIVE so NO qemu/binfmt emulation is needed (the x86+emulation path
+    # failed pi-gen's in-container arch-test). The proprietary lib stays private
+    # in chaoticlab-sbc (cloned at build time via the SBC_READ_TOKEN secret);
+    # this baker repo holds only image-assembly scripts.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 120
 
     steps:
@@ -36,27 +37,6 @@ jobs:
             echo "::error::Missing required secrets: ${missing[*]}"
             exit 1
           fi
-
-      - name: Set up QEMU binfmt for arm64 (FIX-BINARY flag)
-        # pi-gen's preflight runs `arch-test arm64` — it EXECUTES an arm64 binary
-        # inside its build container. That only works if binfmt is registered with
-        # the FIX-BINARY (F) flag, which embeds the qemu interpreter into the kernel
-        # so it works across mount namespaces / nested containers. Plain
-        # qemu-user-static / setup-qemu-action register WITHOUT F → "arm64: not
-        # supported (emulated)" and pi-gen aborts. tonistiigi/binfmt --install sets F.
-        run: |
-          # 1) host qemu binary (build-docker.sh greps `which qemu-aarch64`)
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static binfmt-support
-          for q in qemu-aarch64 qemu-arm; do
-            command -v "$q" >/dev/null 2>&1 || sudo ln -sf "$(command -v ${q}-static)" "/usr/local/bin/$q"
-          done
-          # 2) RE-register arm64 binfmt with the F flag (must run LAST so it wins)
-          docker run --privileged --rm tonistiigi/binfmt --install arm64
-          # 3) verify emulation actually works inside a container (must force
-          #    --platform: the arm64v8/* repo has no amd64 manifest)
-          docker run --rm --platform linux/arm64 arm64v8/debian:bookworm-slim uname -m
-          echo "binfmt entries:" && ls /proc/sys/fs/binfmt_misc/ | grep -iE 'qemu|aarch64' || true
 
       - name: Set up Python (wheel build)
         uses: actions/setup-python@v5
