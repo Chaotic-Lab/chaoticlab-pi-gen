@@ -53,8 +53,9 @@ jobs:
           done
           # 2) RE-register arm64 binfmt with the F flag (must run LAST so it wins)
           docker run --privileged --rm tonistiigi/binfmt --install arm64
-          # 3) verify emulation actually works inside a container
-          docker run --rm arm64v8/debian:bookworm-slim uname -m
+          # 3) verify emulation actually works inside a container (must force
+          #    --platform: the arm64v8/* repo has no amd64 manifest)
+          docker run --rm --platform linux/arm64 arm64v8/debian:bookworm-slim uname -m
           echo "binfmt entries:" && ls /proc/sys/fs/binfmt_misc/ | grep -iE 'qemu|aarch64' || true
 
       - name: Set up Python (wheel build)
