@@ -25,6 +25,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Compute build metadata (human-readable image name)
+        id: meta
+        # Short 7-char SHA → readable, still traceable to the exact commit.
+        # Combined with github.run_number this yields names like
+        # "image_2026-05-30-vena-pulse-r13-1427c5d.img.xz" instead of a 40-char
+        # SHA blob. pi-gen auto-prefixes the build date.
+        run: echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Validate required secrets
         run: |
           missing=()
@@ -82,7 +90,7 @@ jobs:
           #     tag's guarded cp simply skips the missing .bmap and completes.
           #     No .bmap artifact is produced (fine — flash the .img.xz directly).
           pi-gen-version: '2025-10-01-raspios-bookworm-arm64'
-          image-name: vena-pulse-${{ github.sha }}
+          image-name: vena-pulse-r${{ github.run_number }}-${{ steps.meta.outputs.short_sha }}
           stage-list: stage0 stage1 stage2 ./stage-tdc
           release: bookworm
           compression: xz
@@ -152,6 +160,6 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: pi-image-${{ github.sha }}
+          name: pi-image-r${{ github.run_number }}-${{ steps.meta.outputs.short_sha }}
           path: ${{ steps.pi-gen.outputs.image-path }}
           retention-days: 7
