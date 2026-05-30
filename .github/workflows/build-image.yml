@@ -37,10 +37,19 @@ jobs:
             exit 1
           fi
 
-      - name: Set up QEMU (aarch64 binfmt for cross-build on x86)
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
+      - name: Set up QEMU + binfmt for arm64 cross-build
+        # pi-gen's build-docker.sh runs `which qemu-aarch64` ON THE HOST and exits 1 if
+        # absent. docker/setup-qemu-action only registers binfmt_misc handlers — it does
+        # NOT install the qemu host binary. qemu-user-static installs qemu-<arch>-static
+        # AND registers F-flag binfmt (needed for the arm64 chroot). We symlink the
+        # non-suffixed names pi-gen greps for.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static binfmt-support
+          for q in qemu-aarch64 qemu-arm; do
+            command -v "$q" >/dev/null 2>&1 || sudo ln -sf "$(command -v ${q}-static)" "/usr/local/bin/$q"
+          done
+          which qemu-aarch64 && echo "binfmt:" && ls /proc/sys/fs/binfmt_misc/ | grep -i qemu || true
 
       - name: Set up Python (wheel build)
         uses: actions/setup-python@v5
@@ -83,7 +92,6 @@ jobs:
           timezone: America/Sao_Paulo
           keyboard-keymap: br
           hostname: vena-pulse
-          increase-runner-disk-size: true
           verbose-output: true
 
       - name: Compute SHA-256 manifest (OTA verification path)
