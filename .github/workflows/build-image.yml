@@ -37,19 +37,25 @@ jobs:
             exit 1
           fi
 
-      - name: Set up QEMU + binfmt for arm64 cross-build
-        # pi-gen's build-docker.sh runs `which qemu-aarch64` ON THE HOST and exits 1 if
-        # absent. docker/setup-qemu-action only registers binfmt_misc handlers — it does
-        # NOT install the qemu host binary. qemu-user-static installs qemu-<arch>-static
-        # AND registers F-flag binfmt (needed for the arm64 chroot). We symlink the
-        # non-suffixed names pi-gen greps for.
+      - name: Set up QEMU binfmt for arm64 (FIX-BINARY flag)
+        # pi-gen's preflight runs `arch-test arm64` — it EXECUTES an arm64 binary
+        # inside its build container. That only works if binfmt is registered with
+        # the FIX-BINARY (F) flag, which embeds the qemu interpreter into the kernel
+        # so it works across mount namespaces / nested containers. Plain
+        # qemu-user-static / setup-qemu-action register WITHOUT F → "arm64: not
+        # supported (emulated)" and pi-gen aborts. tonistiigi/binfmt --install sets F.
         run: |
+          # 1) host qemu binary (build-docker.sh greps `which qemu-aarch64`)
           sudo apt-get update
           sudo apt-get install -y qemu-user-static binfmt-support
           for q in qemu-aarch64 qemu-arm; do
             command -v "$q" >/dev/null 2>&1 || sudo ln -sf "$(command -v ${q}-static)" "/usr/local/bin/$q"
           done
-          which qemu-aarch64 && echo "binfmt:" && ls /proc/sys/fs/binfmt_misc/ | grep -i qemu || true
+          # 2) RE-register arm64 binfmt with the F flag (must run LAST so it wins)
+          docker run --privileged --rm tonistiigi/binfmt --install arm64
+          # 3) verify emulation actually works inside a container
+          docker run --rm arm64v8/debian:bookworm-slim uname -m
+          echo "binfmt entries:" && ls /proc/sys/fs/binfmt_misc/ | grep -iE 'qemu|aarch64' || true
 
       - name: Set up Python (wheel build)
         uses: actions/setup-python@v5
