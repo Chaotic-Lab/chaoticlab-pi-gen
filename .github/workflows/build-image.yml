@@ -74,19 +74,17 @@ jobs:
           release: bookworm
           compression: xz
           compression-level: 9
-          enable-pigen-cache: true
-          cache-read-only: ${{ github.event_name == 'pull_request' }}
           username: vena
           password: ${{ secrets.PI_DEFAULT_PASSWORD }}
           enable-ssh: 1
           pubkey-only-ssh: 1
           pubkey-ssh-first-user: ${{ secrets.OPS_SSH_PUBKEY }}
-          passwordless-sudo: 1
           locale: pt_BR.UTF-8
           timezone: America/Sao_Paulo
           keyboard-keymap: br
           hostname: vena-pulse
-          verbose-output: false
+          increase-runner-disk-size: true
+          verbose-output: true
 
       - name: Compute SHA-256 manifest (OTA verification path)
         id: sha
