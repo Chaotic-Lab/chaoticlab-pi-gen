@@ -97,6 +97,12 @@ jobs:
           compression-level: 9
           username: vena
           password: ${{ secrets.PI_DEFAULT_PASSWORD }}
+          # Bake `vena` as the ACTIVE user and SKIP the first-boot userconfig
+          # wizard (the blue "Please enter new username" screen). Without this,
+          # pi-gen enables first-boot user-rename and a headless appliance hangs
+          # forever waiting for interactive keyboard input. With it, the Pi boots
+          # straight to a ready `vena` account (SSH via the pubkey below).
+          disable-first-boot-user-rename: 1
           enable-ssh: 1
           pubkey-only-ssh: 1
           pubkey-ssh-first-user: ${{ secrets.OPS_SSH_PUBKEY }}
